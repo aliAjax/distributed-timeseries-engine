@@ -15,8 +15,13 @@ func ProduceReplicaResults(ctx context.Context, jobs []func() error) <-chan erro
 			select {
 			case results <- run():
 			case <-ctx.Done():
+				results <- ctx.Err()
 			}
 		}(job)
 	}
+	go func() {
+		workers.Wait()
+		close(results)
+	}()
 	return results
 }

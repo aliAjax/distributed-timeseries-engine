@@ -8,7 +8,10 @@ func ConsumeReplicaResults(ctx context.Context, results <-chan error) (int, erro
 		select {
 		case <-ctx.Done():
 			return completed, ctx.Err()
-		case err := <-results:
+		case err, ok := <-results:
+			if !ok {
+				return completed, nil
+			}
 			if err != nil {
 				return completed, err
 			}
