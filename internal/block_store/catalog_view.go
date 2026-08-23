@@ -10,9 +10,17 @@ type CatalogView struct {
 func NewCatalogView() *CatalogView { return &CatalogView{entries: make(map[string]IndexEntry)} }
 
 func (v *CatalogView) Put(entry IndexEntry) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	v.entries[entry.BlockID] = entry
 }
 
 func (v *CatalogView) Snapshot() map[string]IndexEntry {
-	return v.entries
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	out := make(map[string]IndexEntry, len(v.entries))
+	for k, val := range v.entries {
+		out[k] = val
+	}
+	return out
 }

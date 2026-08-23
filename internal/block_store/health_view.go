@@ -10,9 +10,17 @@ type HealthView struct {
 func NewHealthView() *HealthView { return &HealthView{status: make(map[string]int)} }
 
 func (v *HealthView) Set(name string, value int) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	v.status[name] = value
 }
 
 func (v *HealthView) Snapshot() map[string]int {
-	return v.status
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	out := make(map[string]int, len(v.status))
+	for k, val := range v.status {
+		out[k] = val
+	}
+	return out
 }
