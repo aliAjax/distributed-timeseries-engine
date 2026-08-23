@@ -49,21 +49,49 @@ func (t *Tracer) End(s *Span, err error) {
 		copy(t.spans, t.spans[1:])
 		t.spans = t.spans[:t.max-1]
 	}
-	t.spans = append(t.spans, *s)
+	t.spans = append(t.spans, snapshotSpan(s))
 	t.logger.Printf("trace=%s span=%s duration=%s err=%v", s.Trace, s.Name, s.Ended.Sub(s.Started), err)
 }
 func (t *Tracer) Recent() []Span {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return append([]Span(nil), t.spans...)
+	out := make([]Span, len(t.spans))
+	for i := range t.spans {
+		out[i] = snapshotSpan(&t.spans[i])
+	}
+	return out
 }
 
 type traceKey struct{}
 
 func WithAttribute(s *Span, key, value string) {
 	if s != nil {
+		if s.Attributes == nil {
+			s.Attributes = map[string]string{}
+		}
 		s.Attributes[key] = value
 	}
+}
+
+// snapshotSpan returns a defensive copy of s whose Attributes map is
+// independent of s, so later mutations to the live span (or to a returned
+// copy) cannot bleed into stored history.
+func snapshotSpan(s *Span) Span {
+	cp := Span{
+		Name:    s.Name,
+		Trace:   s.Trace,
+		Started: s.Started,
+		Ended:   s.Ended,
+		Err:     s.Err,
+	}
+	if s.Attributes != nil {
+		attrs := make(map[string]string, len(s.Attributes))
+		for k, v := range s.Attributes {
+			attrs[k] = v
+		}
+		cp.Attributes = attrs
+	}
+	return cp
 }
 
 type Timer struct {

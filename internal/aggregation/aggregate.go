@@ -70,12 +70,14 @@ func Rate(points []metric_domain.Point) float64 {
 	if len(points) < 2 {
 		return 0
 	}
-	sort.Slice(points, func(i, j int) bool { return points[i].Timestamp < points[j].Timestamp })
-	dt := float64(points[len(points)-1].Timestamp-points[0].Timestamp) / 1e9
+	sorted := make([]metric_domain.Point, len(points))
+	copy(sorted, points)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Timestamp < sorted[j].Timestamp })
+	dt := float64(sorted[len(sorted)-1].Timestamp-sorted[0].Timestamp) / 1e9
 	if dt <= 0 {
 		return 0
 	}
-	return (points[len(points)-1].Value - points[0].Value) / dt
+	return (sorted[len(sorted)-1].Value - sorted[0].Value) / dt
 }
 func Quantile(points []metric_domain.Point, q float64) float64 {
 	if len(points) == 0 {

@@ -36,12 +36,14 @@ func Downsample(points []Point, step int64) []Point {
 	if step <= 0 {
 		return append([]Point(nil), points...)
 	}
-	sort.Slice(points, func(i, j int) bool { return points[i].Timestamp < points[j].Timestamp })
+	sorted := make([]Point, len(points))
+	copy(sorted, points)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Timestamp < sorted[j].Timestamp })
 	var out []Point
 	var bucket int64
 	var sum float64
 	var count int
-	for _, p := range points {
+	for _, p := range sorted {
 		b := p.Timestamp / step
 		if count > 0 && b != bucket {
 			out = append(out, Point{Timestamp: bucket * step, Value: sum / float64(count), Quality: 1})

@@ -20,8 +20,10 @@ func Resample(points []Point, start, end, step int64) []Bucket {
 	for i := range out {
 		out[i] = Bucket{Start: start + int64(i)*step, End: start + int64(i+1)*step, Min: 0, Max: 0}
 	}
-	sort.Slice(points, func(i, j int) bool { return points[i].Timestamp < points[j].Timestamp })
-	for _, p := range points {
+	sorted := make([]Point, len(points))
+	copy(sorted, points)
+	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Timestamp < sorted[j].Timestamp })
+	for _, p := range sorted {
 		if p.Timestamp < start || p.Timestamp >= end {
 			continue
 		}
