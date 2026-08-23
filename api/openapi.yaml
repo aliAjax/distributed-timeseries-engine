@@ -1,0 +1,39 @@
+openapi: 3.0.3
+info:
+  title: Distributed Time Series Engine
+  version: 1.0.0
+paths:
+  /healthz:
+    get: {responses: {"200": {description: healthy}}}
+  /api/v1/ingest:
+    post:
+      summary: Batch ingest samples
+      requestBody:
+        required: true
+        content: {application/json: {schema: {$ref: '#/components/schemas/IngestRequest'}}}
+      responses: {"202": {description: accepted}, "400": {description: invalid}}
+  /api/v1/query:
+    get:
+      parameters: [{name: query, in: query, required: true, schema: {type: string}}]
+      responses: {"200": {description: result}}
+  /api/v1/labels:
+    get: {responses: {"200": {description: labels}}}
+  /api/v1/label-values:
+    get: {parameters: [{name: name, in: query, schema: {type: string}}], responses: {"200": {description: values}}}
+components:
+  schemas:
+    IngestRequest:
+      type: object
+      required: [samples]
+      properties:
+        samples: {type: array, items: {$ref: '#/components/schemas/Sample'}}
+    Sample:
+      type: object
+      required: [tenant, metric, timestamp, value]
+      properties:
+        tenant: {type: string}
+        metric: {type: string}
+        labels: {type: array, items: {type: object}}
+        timestamp: {type: string, format: date-time}
+        value: {type: number}
+        quality: {type: integer}
