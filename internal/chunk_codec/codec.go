@@ -25,6 +25,8 @@ type DecodeFailure struct {
 
 func (e DecodeFailure) Error() string { return fmt.Sprintf("decode chunk: %v", e.Err) }
 
+func (e DecodeFailure) Unwrap() []error { return []error{e.Kind, e.Err} }
+
 const magic uint32 = 0x54534331
 
 type Point struct {

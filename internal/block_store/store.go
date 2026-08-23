@@ -23,6 +23,8 @@ type BlockWriteFailure struct {
 
 func (e BlockWriteFailure) Error() string { return fmt.Sprintf("block write: %v", e.Err) }
 
+func (e BlockWriteFailure) Unwrap() []error { return []error{e.Kind, e.Err} }
+
 type Block struct {
 	ID       string              `json:"id"`
 	Series   string              `json:"series"`

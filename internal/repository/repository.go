@@ -23,6 +23,8 @@ type RecoveryFailure struct {
 
 func (e RecoveryFailure) Error() string { return fmt.Sprintf("recovery: %v", e.Err) }
 
+func (e RecoveryFailure) Unwrap() []error { return []error{e.Kind, e.Err} }
+
 type Repository struct {
 	mu                 sync.RWMutex
 	metrics            map[string]metric_domain.Metric

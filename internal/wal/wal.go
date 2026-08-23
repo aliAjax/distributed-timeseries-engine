@@ -22,6 +22,8 @@ type ReplayFailure struct {
 
 func (e ReplayFailure) Error() string { return fmt.Sprintf("replay: %v", e.Err) }
 
+func (e ReplayFailure) Unwrap() []error { return []error{e.Kind, e.Err} }
+
 type Record struct {
 	Sequence uint64 `json:"sequence"`
 	Kind     string `json:"kind"`
