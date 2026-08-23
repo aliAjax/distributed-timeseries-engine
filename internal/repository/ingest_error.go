@@ -8,15 +8,17 @@ import (
 var ErrStorageIngest = errors.New("storage ingest failed")
 
 type IngestFailure struct {
-	Series  string
-	Message string
+	Series string
+	Err    error
 }
 
-func (e IngestFailure) Error() string { return fmt.Sprintf("ingest %s: %s", e.Series, e.Message) }
+func (e IngestFailure) Error() string { return fmt.Sprintf("ingest %s: %v", e.Series, e.Err) }
+func (e IngestFailure) Unwrap() error { return e.Err }
+func (e IngestFailure) Is(target error) bool { return target == ErrStorageIngest }
 
 func WrapIngestFailure(series string, err error) error {
 	if err == nil {
 		return nil
 	}
-	return IngestFailure{Series: series, Message: err.Error()}
+	return IngestFailure{Series: series, Err: err}
 }

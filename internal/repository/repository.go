@@ -27,12 +27,12 @@ type Repository struct {
 func Open(dir string, maxSamples int) (*Repository, error) {
 	w, e := wal.Open(dir + "/wal.log")
 	if e != nil {
-		return nil, e
+		return nil, WrapOpenFailure(dir+"/wal.log", e)
 	}
 	b, e := block_store.Open(dir + "/blocks")
 	if e != nil {
 		w.Close()
-		return nil, e
+		return nil, WrapOpenFailure(dir+"/blocks", e)
 	}
 	r := &Repository{metrics: map[string]metric_domain.Metric{}, samples: map[string][]metric_domain.Point{}, index: label_index.New(), wal: w, blocks: b, maxSamples: maxSamples}
 	e = w.Replay(func(x wal.Record) error {
@@ -47,7 +47,7 @@ func Open(dir string, maxSamples int) (*Repository, error) {
 		return nil
 	})
 	if e != nil {
-		return nil, e
+		return nil, WrapOpenFailure(dir, e)
 	}
 	return r, nil
 }
@@ -104,7 +104,7 @@ func (r *Repository) Ingest(ctx context.Context, in []metric_domain.Sample) (int
 		}
 		b, _ := jsonMarshal(s)
 		if e := r.wal.Append(wal.Record{Kind: "sample", Payload: b}, true); e != nil {
-			return accepted, e
+			return accepted, WrapIngestFailure(s.SeriesID(), e)
 		}
 		r.apply(s)
 		accepted++
@@ -112,7 +112,11 @@ func (r *Repository) Ingest(ctx context.Context, in []metric_domain.Sample) (int
 	return accepted, nil
 }
 func (r *Repository) Query(ctx context.Context, metric string, labels []metric_domain.LabelMatcher, start, end time.Time) (map[string][]metric_domain.Point, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, WrapQueryFailure(metric, err)
+	}
 	r.mu.RLock()
+	defer r.mu.RUnlock()
 	ids := r.index.Match(labels)
 	if len(ids) == 0 {
 		for id, m := range r.metrics {
@@ -124,8 +128,7 @@ func (r *Repository) Query(ctx context.Context, metric string, labels []metric_d
 	out := map[string][]metric_domain.Point{}
 	for _, id := range ids {
 		if err := ctx.Err(); err != nil {
-			r.mu.RUnlock()
-			return nil, err
+			return nil, WrapQueryFailure(metric, err)
 		}
 		if metric != "" && !strings.Contains(id, "/"+metric+"{") {
 			continue
@@ -137,7 +140,6 @@ func (r *Repository) Query(ctx context.Context, metric string, labels []metric_d
 			}
 		}
 	}
-	r.mu.RUnlock()
 	return out, nil
 }
 
@@ -157,7 +159,7 @@ func (r *Repository) SealAll() error {
 			cp[i] = chunk_codec.Point{Timestamp: p.Timestamp, Value: p.Value, Quality: uint8(p.Quality)}
 		}
 		if _, e := r.blocks.Seal(id, cp); e != nil {
-			return e
+			return WrapSealFailure(id, e)
 		}
 		r.samples[id] = nil
 	}

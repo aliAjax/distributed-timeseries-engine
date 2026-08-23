@@ -8,15 +8,17 @@ import (
 var ErrStorageSeal = errors.New("storage seal failed")
 
 type SealFailure struct {
-	Block   string
-	Message string
+	Block string
+	Err   error
 }
 
-func (e SealFailure) Error() string { return fmt.Sprintf("seal %s: %s", e.Block, e.Message) }
+func (e SealFailure) Error() string { return fmt.Sprintf("seal %s: %v", e.Block, e.Err) }
+func (e SealFailure) Unwrap() error { return e.Err }
+func (e SealFailure) Is(target error) bool { return target == ErrStorageSeal }
 
 func WrapSealFailure(block string, err error) error {
 	if err == nil {
 		return nil
 	}
-	return SealFailure{Block: block, Message: err.Error()}
+	return SealFailure{Block: block, Err: err}
 }

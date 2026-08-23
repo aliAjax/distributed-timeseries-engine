@@ -47,6 +47,23 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
 }
+
+// statusFor maps a storage error kind (from repository.ClassifyStorageError) to
+// an HTTP status. Ingest/query failures are client- or upstream-visible problems
+// surfaced as 400/504; open/seal failures indicate the storage layer itself is
+// broken, so the service reports 503 unavailable.
+func statusFor(kind string) int {
+	switch kind {
+	case "open", "seal":
+		return 503
+	case "ingest":
+		return 400
+	case "query":
+		return 504
+	default:
+		return 500
+	}
+}
 func (s *Server) health(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, 200, map[string]any{"status": "ok", "uptime": time.Since(s.Started).String()})
 }
@@ -70,7 +87,7 @@ func (s *Server) ingest(w http.ResponseWriter, r *http.Request) {
 	atomic.AddUint64(&s.Metrics.Ingested, uint64(n))
 	if e != nil {
 		atomic.AddUint64(&s.Metrics.Errors, 1)
-		writeJSON(w, 400, map[string]any{"accepted": n, "error": e.Error()})
+		writeJSON(w, statusFor(repository.ClassifyStorageError(e)), map[string]any{"kind": repository.ClassifyStorageError(e), "accepted": n, "error": e.Error()})
 		return
 	}
 	writeJSON(w, 202, map[string]any{"accepted": n})
@@ -96,7 +113,8 @@ func (s *Server) query(w http.ResponseWriter, r *http.Request) {
 	}
 	out, e := s.Repo.Query(r.Context(), expr.Metric, expr.Matchers, start, end)
 	if e != nil {
-		writeJSON(w, 504, map[string]string{"error": e.Error()})
+		atomic.AddUint64(&s.Metrics.Errors, 1)
+		writeJSON(w, statusFor(repository.ClassifyStorageError(e)), map[string]any{"kind": repository.ClassifyStorageError(e), "error": e.Error()})
 		return
 	}
 	writeJSON(w, 200, map[string]any{"data": out, "start": start, "end": end})

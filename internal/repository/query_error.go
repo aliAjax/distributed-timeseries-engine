@@ -8,15 +8,17 @@ import (
 var ErrStorageQuery = errors.New("storage query failed")
 
 type QueryFailure struct {
-	Metric  string
-	Message string
+	Metric string
+	Err    error
 }
 
-func (e QueryFailure) Error() string { return fmt.Sprintf("query %s: %s", e.Metric, e.Message) }
+func (e QueryFailure) Error() string { return fmt.Sprintf("query %s: %v", e.Metric, e.Err) }
+func (e QueryFailure) Unwrap() error { return e.Err }
+func (e QueryFailure) Is(target error) bool { return target == ErrStorageQuery }
 
 func WrapQueryFailure(metric string, err error) error {
 	if err == nil {
 		return nil
 	}
-	return QueryFailure{Metric: metric, Message: err.Error()}
+	return QueryFailure{Metric: metric, Err: err}
 }
