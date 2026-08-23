@@ -1,0 +1,7 @@
+services:
+  timeseriesd:
+    build: ..
+    ports: ["8080:8080"]
+    environment: ["TS_HTTP_ADDR=:8080", "TS_DATA_DIR=/var/lib/timeseries"]
+    volumes: ["ts-data:/var/lib/timeseries"]
+volumes: {ts-data: {}}
