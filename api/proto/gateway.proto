@@ -1,0 +1,12 @@
+syntax = "proto3";
+package timeseries.v1;
+option go_package = "example.com/distributed-timeseries-engine/api/proto;timeseriesv1";
+service TimeSeriesGateway { rpc WriteAppend(WriteRequest) returns (WriteResponse); rpc QueryRange(QueryRequest) returns (QueryResponse); rpc AssignShard(ShardAssignment) returns (ShardAssignment); }
+message WriteRequest { string tenant = 1; repeated Sample samples = 2; }
+message Sample { string metric = 1; map<string,string> labels = 2; int64 timestamp_unix_nano = 3; double value = 4; uint32 quality = 5; }
+message WriteResponse { uint32 accepted = 1; uint32 duplicates = 2; string error = 3; }
+message QueryRequest { string tenant = 1; string query = 2; int64 start_unix = 3; int64 end_unix = 4; }
+message QueryResponse { repeated Series series = 1; }
+message Series { string id = 1; repeated Point points = 2; }
+message Point { int64 timestamp_unix_nano = 1; double value = 2; uint32 quality = 3; }
+message ShardAssignment { uint32 shard = 1; uint64 epoch = 2; repeated string replicas = 3; }
