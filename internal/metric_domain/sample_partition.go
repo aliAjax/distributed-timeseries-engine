@@ -1,10 +1,8 @@
 package metric_domain
 
 func PartitionSamples(samples []Sample, accept func(Sample) bool) ([]Sample, []Sample) {
-	accepted := samples[:len(samples):len(samples)]
-	accepted = accepted[:0]
-	rejected := samples[:len(samples):len(samples)]
-	rejected = rejected[:0]
+	accepted := make([]Sample, 0, len(samples))
+	rejected := make([]Sample, 0, len(samples))
 	for _, sample := range samples {
 		if accept(sample) {
 			accepted = append(accepted, sample)
