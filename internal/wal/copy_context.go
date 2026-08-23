@@ -11,6 +11,9 @@ func CopyWithContext(ctx context.Context, dst io.Writer, src io.Reader, buffer [
 	}
 	var written int64
 	for {
+		if err := ctx.Err(); err != nil {
+			return written, err
+		}
 		n, readErr := src.Read(buffer)
 		if n > 0 {
 			m, writeErr := dst.Write(buffer[:n])
